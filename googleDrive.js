@@ -5,8 +5,8 @@ const { google } = require('googleapis');
 // ========================
 // 🔐 Google OAuth Setup
 // ========================
-const CREDENTIALS = require('./client_secret_266554319533-r7ljr05o771iq5j3ubnsq1k4i6km938h.apps.googleusercontent.com.json');
-
+const { getOAuthCredentials } = require('./config/googleAuth');
+const CREDENTIALS = getOAuthCredentials(); // Changed from oauthCredentials to CREDENTIALS
 const { client_secret, client_id, redirect_uris } = CREDENTIALS.web;
 
 const oAuth2Client = new google.auth.OAuth2(
