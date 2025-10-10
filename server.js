@@ -248,7 +248,7 @@ function generateOTP() {
 
 // Email validation
 function isValidEmail(email) {
-  return email === 'hshuddhalwar1102@gmail.com';
+  return email === 'automations@inspiredideasolutions.com';
 }
 
 // Send OTP endpoint
@@ -481,3 +481,4 @@ app.listen(PORT, () => {
   console.log(`✅ Map file location: ${MAP_FILE_PATH}`);
 
 });
+
