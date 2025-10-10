@@ -18,55 +18,58 @@ const oAuth2Client = new google.auth.OAuth2(
 // ========================
 // 🔑 Load token from environment or file
 // ========================
-const tokenData = getTokenCredentials();
+let tokenData = null;
+let isAuthenticated = false;
 
-if (tokenData) {
-  oAuth2Client.setCredentials(tokenData);
-  console.log("✅ Token loaded successfully");
-} else {
-  console.error("❌ No token found. Please set GOOGLE_TOKEN_JSON environment variable or run auth script locally.");
-  // Don't exit in production - just log the error
-  if (process.env.NODE_ENV === 'production') {
-    console.log("🔄 Continuing without Google Drive authentication");
+try {
+  tokenData = getTokenCredentials();
+  if (tokenData) {
+    oAuth2Client.setCredentials(tokenData);
+    isAuthenticated = true;
+    console.log("✅ Google Drive token loaded successfully");
   } else {
-    process.exit(1);
+    console.log("⚠️  No Google Drive token available - uploads will be skipped");
   }
+} catch (error) {
+  console.log("⚠️  Could not load Google Drive token - uploads will be skipped:", error.message);
 }
 
 // Auto-refresh: save updated access tokens
 oAuth2Client.on('tokens', (tokens) => {
   if (tokens.refresh_token || tokens.access_token) {
-    // In production, you might want to update the environment variable
-    // or store the token in a database
-    console.log("🔄 Token refreshed:", tokens);
+    console.log("🔄 Token refreshed");
     
-    // For local development, still write to file
-    if (process.env.NODE_ENV !== 'production') {
+    // For local development, write to file
+    if (process.env.NODE_ENV !== 'production' && fs.existsSync) {
       const TOKEN_PATH = path.join(__dirname, 'token.json');
-      const currentToken = fs.existsSync(TOKEN_PATH) 
-        ? JSON.parse(fs.readFileSync(TOKEN_PATH, 'utf8'))
-        : {};
-      
-      fs.writeFileSync(TOKEN_PATH, JSON.stringify({
-        ...currentToken,
-        ...tokens
-      }, null, 2));
-      console.log("💾 Token saved to token.json");
+      try {
+        const currentToken = fs.existsSync(TOKEN_PATH) 
+          ? JSON.parse(fs.readFileSync(TOKEN_PATH, 'utf8'))
+          : {};
+        
+        fs.writeFileSync(TOKEN_PATH, JSON.stringify({
+          ...currentToken,
+          ...tokens
+        }, null, 2));
+        console.log("💾 Token saved to token.json");
+      } catch (error) {
+        console.log("📝 Could not save token to file (this is normal in production)");
+      }
     }
   }
 });
 
 // ========================
-// 📂 Upload Helper (rest of your code remains the same)
+// 📂 Upload Helper
 // ========================
 async function uploadToDrive(filePath, fileName, folderId) {
   // If no token is available, skip Google Drive upload
-  if (!tokenData) {
-    console.log("⏭️  Skipping Google Drive upload - no authentication token");
-    return null;
+  if (!isAuthenticated) {
+    console.log("⏭️  Skipping Google Drive upload - no authentication token available");
+    return { id: null, webViewLink: null, skipped: true };
   }
 
-  console.log("📂 Upload debug:", {
+  console.log("📂 Uploading to Google Drive:", {
     filePath,
     fileExists: fs.existsSync(filePath),
     fileName,
@@ -89,6 +92,7 @@ async function uploadToDrive(filePath, fileName, folderId) {
       fields: 'id, webViewLink',
     });
 
+    console.log("✅ File uploaded successfully to Google Drive");
     return res.data;
   } catch (err) {
     console.error("🚨 Drive API error:", err.response?.data || err.message);
@@ -96,4 +100,4 @@ async function uploadToDrive(filePath, fileName, folderId) {
   }
 }
 
-module.exports = { uploadToDrive, oAuth2Client };
+module.exports = { uploadToDrive, oAuth2Client, isAuthenticated };
