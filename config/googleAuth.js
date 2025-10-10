@@ -15,7 +15,21 @@ function getOAuthCredentials() {
       }
     };
   }
-  
+  // Add this function to your existing config/googleAuth.js file
+function getTokenCredentials() {
+    // Check if we have token data in environment variables
+    if (process.env.GOOGLE_TOKEN_JSON) {
+      return JSON.parse(process.env.GOOGLE_TOKEN_JSON);
+    }
+    
+    // Fallback to file system (for local development)
+    const TOKEN_PATH = path.join(__dirname, '../token.json');
+    if (fs.existsSync(TOKEN_PATH)) {
+      return JSON.parse(fs.readFileSync(TOKEN_PATH, 'utf8'));
+    }
+    
+    return null;
+  }
   function getServiceAccountCredentials() {
     // Replace actual newlines with \n in the private key
     const privateKey = process.env.GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY.replace(/\\n/g, '\n');
@@ -37,5 +51,6 @@ function getOAuthCredentials() {
   
   module.exports = {
     getOAuthCredentials,
+    getTokenCredentials,
     getServiceAccountCredentials
   };
