@@ -551,11 +551,14 @@ app.get('/callback', async (req, res) => {
     res.status(500).send('❌ Authorization failed.');
   }
 });
-mongoose.connect(process.env.MONGO_URI, {
+const MONGO_URI = process.env.MONGO_URI || 'mongodb://127.0.0.1:27017/lawmatics-db';
+
+console.log('MongoDB Connection String:', MONGO_URI ? 'Present' : 'MISSING');
+
+mongoose.connect(MONGO_URI, {
   useNewUrlParser: true,
   useUnifiedTopology: true,
-  serverSelectionTimeoutMS: 5000, // 5 second timeout
-  socketTimeoutMS: 45000, // 45 second socket timeout
+  serverSelectionTimeoutMS: 5000,
 })
 .then(() => {
   console.log('✅ MongoDB connected successfully');
@@ -563,9 +566,7 @@ mongoose.connect(process.env.MONGO_URI, {
 })
 .catch(err => {
   console.error('❌ MongoDB connection FAILED:');
-  console.error('Error name:', err.name);
-  console.error('Error message:', err.message);
-  console.error('Error code:', err.code);
+  console.error('Error:', err.message);
 });
 // ========================
 // 🏃‍♂️ START SERVER
@@ -578,6 +579,7 @@ app.listen(PORT, () => {
   console.log(`✅ Map file location: ${MAP_FILE_PATH}`);
 
 });
+
 
 
 
