@@ -233,11 +233,20 @@ mongoose.connect(process.env.MONGO_URI, {
 const otpStorage = {};
 
 // Configure nodemailer transporter
+// const transporter = nodemailer.createTransport({
+//   service: 'gmail',
+//   auth: {
+//     user: process.env.EMAIL_USER,
+//     pass: process.env.EMAIL_PASS,
+//   },
+// });
+// Replace your current transporter with this:
 const transporter = nodemailer.createTransport({
-  service: 'gmail',
+  host: 'smtp.sendgrid.net',
+  port: 587,
   auth: {
-    user: process.env.EMAIL_USER,
-    pass: process.env.EMAIL_PASS,
+    user: 'apikey', // ← Literally the string 'apikey'
+    pass: process.env.SENDGRID_API_KEY, // Your new API key goes in environment variables
   },
 });
 
@@ -481,4 +490,5 @@ app.listen(PORT, () => {
   console.log(`✅ Map file location: ${MAP_FILE_PATH}`);
 
 });
+
 
