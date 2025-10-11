@@ -551,22 +551,19 @@ app.get('/callback', async (req, res) => {
     res.status(500).send('❌ Authorization failed.');
   }
 });
-const MONGO_URI = process.env.MONGO_URI || 'mongodb://127.0.0.1:27017/lawmatics-db';
+// TEMPORARY FIX - Replace your current connection
+const MONGO_URI = process.env.MONGO_URI || 'mongodb+srv://automations_db_user:Automations%402025@cluster0.v1napzi.mongodb.net/lawmatics-db';
 
-console.log('MongoDB Connection String:', MONGO_URI ? 'Present' : 'MISSING');
+console.log('Using MongoDB URI:', MONGO_URI ? 'Present' : 'Missing');
 
 mongoose.connect(MONGO_URI, {
   useNewUrlParser: true,
   useUnifiedTopology: true,
-  serverSelectionTimeoutMS: 5000,
 })
-.then(() => {
-  console.log('✅ MongoDB connected successfully');
-  console.log('Database:', mongoose.connection.db.databaseName);
-})
+.then(() => console.log('✅ MongoDB connected successfully'))
 .catch(err => {
-  console.error('❌ MongoDB connection FAILED:');
-  console.error('Error:', err.message);
+  console.error('❌ MongoDB connection error:', err.message);
+  console.log('If this is a network error, check MongoDB Atlas Network Access');
 });
 // ========================
 // 🏃‍♂️ START SERVER
@@ -579,6 +576,7 @@ app.listen(PORT, () => {
   console.log(`✅ Map file location: ${MAP_FILE_PATH}`);
 
 });
+
 
 
 
