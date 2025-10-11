@@ -230,7 +230,7 @@ mongoose.connect(process.env.MONGO_URI, {
 .catch(err => console.error('❌ MongoDB connection error:', err));
 
 // In-memory storage for OTPs (in production, use a database)
-const otpStorage = {};
+// const otpStorage = {};
 
 // Configure nodemailer transporter
 // const transporter = nodemailer.createTransport({
@@ -241,26 +241,78 @@ const otpStorage = {};
 //   },
 // });
 // Replace your current transporter with this:
-const transporter = nodemailer.createTransport({
-  host: 'smtp.sendgrid.net',
-  port: 587,
-  auth: {
-    user: 'apikey', // ← Literally the string 'apikey'
-    pass: process.env.SENDGRID_API_KEY, // Your new API key goes in environment variables
-  },
-});
 
 // Generate random 6-digit OTP
-function generateOTP() {
-  return Math.floor(100000 + Math.random() * 900000).toString();
-}
+// function generateOTP() {
+//   return Math.floor(100000 + Math.random() * 900000).toString();
+// }
+
+// // Email validation
+// function isValidEmail(email) {
+//   return email === 'automations@inspiredideasolutions.com';
+// }
+
+// // Send OTP endpoint
+// app.post('/api/send-otp', async (req, res) => {
+//   const { email } = req.body;
+
+//   if (!isValidEmail(email)) {
+//     return res.status(403).json({ error: 'Access denied. Invalid email.' });
+//   }
+
+//   const otp = generateOTP();
+//   otpStorage[email] = otp;
+
+//   const mailOptions = {
+//     from: process.env.EMAIL_USER,
+//     to: email,
+//     subject: 'Your OTP for Lawmatics USPTO Dashboard',
+//     text: `Your OTP is: ${otp}. This OTP is valid for 10 minutes.`,
+//   };
+
+//   try {
+//     await transporter.sendMail(mailOptions);
+//     res.json({ message: 'OTP sent successfully' });
+//   } catch (error) {
+//     console.error('Error sending email:', error);
+//     res.status(500).json({ error: 'Failed to send OTP' });
+//   }
+// });
+
+// // Verify OTP endpoint
+// app.post('/api/verify-otp', (req, res) => {
+//   const { email, otp } = req.body;
+
+//   if (!isValidEmail(email)) {
+//     return res.status(403).json({ error: 'Access denied. Invalid email.' });
+//   }
+
+//   if (otpStorage[email] === otp) {
+//     delete otpStorage[email];
+//     res.json({ success: true, message: 'OTP verified successfully' });
+//   } else {
+//     res.status(401).json({ error: 'Invalid OTP' });
+//   }
+// });
+const sgMail = require('@sendgrid/mail');
+
+// Configure SendGrid
+sgMail.setApiKey(process.env.SENDGRID_API_KEY);
+
+// In-memory storage for OTPs (in production, use a database)
+const otpStorage = {};
 
 // Email validation
 function isValidEmail(email) {
   return email === 'automations@inspiredideasolutions.com';
 }
 
-// Send OTP endpoint
+// Generate random 6-digit OTP
+function generateOTP() {
+  return Math.floor(100000 + Math.random() * 900000).toString();
+}
+
+// Send OTP endpoint - USING SENDGRID API
 app.post('/api/send-otp', async (req, res) => {
   const { email } = req.body;
 
@@ -271,23 +323,37 @@ app.post('/api/send-otp', async (req, res) => {
   const otp = generateOTP();
   otpStorage[email] = otp;
 
-  const mailOptions = {
-    from: process.env.EMAIL_USER,
+  const msg = {
     to: email,
+    from: {
+      email: 'automations@inspiredideasolutions.com',
+      name: 'Lawmatics USPTO Dashboard'
+    },
     subject: 'Your OTP for Lawmatics USPTO Dashboard',
     text: `Your OTP is: ${otp}. This OTP is valid for 10 minutes.`,
+    html: `
+      <div>
+        <h3>Lawmatics USPTO Dashboard OTP</h3>
+        <p>Your OTP is: <strong>${otp}</strong></p>
+        <p>This OTP is valid for 10 minutes.</p>
+      </div>
+    `
   };
 
   try {
-    await transporter.sendMail(mailOptions);
+    await sgMail.send(msg);
+    console.log('✅ OTP email sent successfully to:', email);
     res.json({ message: 'OTP sent successfully' });
   } catch (error) {
-    console.error('Error sending email:', error);
-    res.status(500).json({ error: 'Failed to send OTP' });
+    console.error('❌ SendGrid API error:', error.response?.body || error.message);
+    res.status(500).json({ 
+      error: 'Failed to send OTP',
+      details: error.response?.body || error.message
+    });
   }
 });
 
-// Verify OTP endpoint
+// Verify OTP endpoint (unchanged)
 app.post('/api/verify-otp', (req, res) => {
   const { email, otp } = req.body;
 
@@ -302,7 +368,6 @@ app.post('/api/verify-otp', (req, res) => {
     res.status(401).json({ error: 'Invalid OTP' });
   }
 });
-
 // ========================
 // 📄 USPTO API ROUTES
 // ========================
@@ -490,5 +555,6 @@ app.listen(PORT, () => {
   console.log(`✅ Map file location: ${MAP_FILE_PATH}`);
 
 });
+
 
 
