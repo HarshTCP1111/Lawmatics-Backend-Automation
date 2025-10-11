@@ -16,7 +16,15 @@ const path = require('path');
 const automationRoutes = require('./routes/automation');
 
 const MAP_FILE_PATH = path.join(__dirname, 'map.json');
-
+// Add this before your routes
+app.get('/api/health', (req, res) => {
+  res.json({ 
+    status: 'OK', 
+    timestamp: new Date().toISOString(),
+    environment: process.env.NODE_ENV,
+    mongodb: mongoose.connection.readyState === 1 ? 'connected' : 'disconnected'
+  });
+});
 // Read map.json
 function readMapFile() {
   try {
@@ -555,6 +563,7 @@ app.listen(PORT, () => {
   console.log(`✅ Map file location: ${MAP_FILE_PATH}`);
 
 });
+
 
 
 
