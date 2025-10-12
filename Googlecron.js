@@ -39,7 +39,7 @@ if (!fs.existsSync(mapDataPath)) {
 
 // Form configuration
 const FORM_URL = "https://app.lawmatics.com/forms/update-by-id/d2ab9a6a-2800-41f3-a4ba-51feedbf02b3";
-const LAW_TOKEN = "Bearer RUdAHUFQ_ouYf_Boc_cmVwZeq6v-mQbMQ4zd-wBpSLw";
+const LAW_TOKEN = process.env.LAW_TOKEN;
 
 // Validate environment variables
 const requiredEnvVars = ['EMAIL_USER', 'EMAIL_PASS', 'EMAIL_TO', 'GDRIVE_FOLDER_ID'];
@@ -826,5 +826,6 @@ module.exports = {
   safeClearAndType
 
 };
+
 
 
