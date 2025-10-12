@@ -8,6 +8,7 @@ const nodemailer = require('nodemailer');
 const { parseStringPromise } = require('xml2js');
 const puppeteer = require("puppeteer");
 const { uploadToDrive } = require('./googleDrive');
+const sgMail = require('@sendgrid/mail');
 
 // ========================
 // 🛠️ INITIAL SETUP
@@ -512,32 +513,66 @@ async function submitFormWithPuppeteer(matterId, applicationNumber, latestDoc, t
 /**
  * Send email notification for new document
  */
+// async function sendEmailNotification(applicationNumber, latestDoc, type) {
+//   const docUrl = latestDoc.driveLink || latestDoc.link || "N/A";
+  
+//   await transporter.sendMail({
+//     from: process.env.EMAIL_USER,
+//     to: process.env.EMAIL_TO,
+//     subject: `New ${latestDoc.description} for ${type} #${applicationNumber}`,
+//     html: `
+//       <h4>Latest Document for ${type} #${applicationNumber}</h4>
+//       <ul>
+//         <li><strong>Date:</strong> ${latestDoc.date.toISOString().split('T')[0]}</li>
+//         <li><strong>Type:</strong> ${latestDoc.description}</li>
+//         ${type === "Patent" ? `
+//           <li><strong>Code:</strong> ${latestDoc.documentCode}</li>
+//           <li><strong>Category:</strong> ${latestDoc.category}</li>
+//         ` : ''}
+//         <li><strong>Link:</strong> ${docUrl !== "N/A" ? `<a href="${docUrl}">View Document</a>` : "No Link Available"}</li>
+//         ${latestDoc.driveLink ? `<li><strong>Storage:</strong> Google Drive</li>` : ''}
+//       </ul>
+//       <p>This is an automated update from USPTO ${type} API.</p>
+//     `,
+//   });
+
+//   console.log(`📩 Email sent for ${type} ${applicationNumber}`);
+// }
+
+/**
+ * Send email notification for new document (SendGrid only)
+ */
 async function sendEmailNotification(applicationNumber, latestDoc, type) {
   const docUrl = latestDoc.driveLink || latestDoc.link || "N/A";
   
-  await transporter.sendMail({
-    from: process.env.EMAIL_USER,
-    to: process.env.EMAIL_TO,
-    subject: `New ${latestDoc.description} for ${type} #${applicationNumber}`,
-    html: `
-      <h4>Latest Document for ${type} #${applicationNumber}</h4>
-      <ul>
-        <li><strong>Date:</strong> ${latestDoc.date.toISOString().split('T')[0]}</li>
-        <li><strong>Type:</strong> ${latestDoc.description}</li>
-        ${type === "Patent" ? `
-          <li><strong>Code:</strong> ${latestDoc.documentCode}</li>
-          <li><strong>Category:</strong> ${latestDoc.category}</li>
-        ` : ''}
-        <li><strong>Link:</strong> ${docUrl !== "N/A" ? `<a href="${docUrl}">View Document</a>` : "No Link Available"}</li>
-        ${latestDoc.driveLink ? `<li><strong>Storage:</strong> Google Drive</li>` : ''}
-      </ul>
-      <p>This is an automated update from USPTO ${type} API.</p>
-    `,
-  });
+  try {
+    sgMail.setApiKey(process.env.SENDGRID_API_KEY);
+    
+    await sgMail.send({
+      from: 'automations@inspiredideasolutions.com',
+      to: 'automations@inspiredideasolutions.com',
+      subject: `New ${latestDoc.description} for ${type} #${applicationNumber}`,
+      html: `
+        <h4>Latest Document for ${type} #${applicationNumber}</h4>
+        <ul>
+          <li><strong>Date:</strong> ${latestDoc.date.toISOString().split('T')[0]}</li>
+          <li><strong>Type:</strong> ${latestDoc.description}</li>
+          ${type === "Patent" ? `
+            <li><strong>Code:</strong> ${latestDoc.documentCode}</li>
+            <li><strong>Category:</strong> ${latestDoc.category}</li>
+          ` : ''}
+          <li><strong>Link:</strong> ${docUrl !== "N/A" ? `<a href="${docUrl}">View Document</a>` : "No Link Available"}</li>
+          ${latestDoc.driveLink ? `<li><strong>Storage:</strong> Google Drive</li>` : ''}
+        </ul>
+        <p>This is an automated update from USPTO ${type} API.</p>
+      `,
+    });
 
-  console.log(`📩 Email sent for ${type} ${applicationNumber}`);
+    console.log(`📩 Email sent for ${type} ${applicationNumber}`);
+  } catch (error) {
+    console.error('❌ Email failed:', error.message);
+  }
 }
-
 // /**
 //  * Send confirmation email when all matters are up to date
 //  */
@@ -560,7 +595,7 @@ async function sendEmailNotification(applicationNumber, latestDoc, type) {
 
 //   console.log(`📩 Confirmation email sent - ${processedCount} new documents out of ${totalCount} matters`);
 // }
-const sgMail = require('@sendgrid/mail');
+
 
 async function sendConfirmationEmail(processedCount, totalCount) {
   try {
@@ -779,3 +814,4 @@ module.exports = {
   safeClearAndType
 
 };
+
