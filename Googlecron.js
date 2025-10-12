@@ -407,9 +407,21 @@ async function safeClearAndType(page, selector, value, timeout = 5000) {
  * Submit Lawmatics form with real USPTO data using Puppeteer
  */
 async function submitFormWithPuppeteer(matterId, applicationNumber, latestDoc, type, prospectData) {
-  const browser = await puppeteer.launch({ 
-    headless: process.env.NODE_ENV === 'production' ? true : false 
-  });
+  // const browser = await puppeteer.launch({ 
+  //   headless: process.env.NODE_ENV === 'production' ? true : false 
+  // });
+  const browser = await puppeteer.launch({
+  headless: true,
+  args: [
+    '--no-sandbox',
+    '--disable-setuid-sandbox',
+    '--disable-dev-shm-usage',
+    '--disable-gpu',
+    '--no-zygote',
+    '--single-process'
+  ]
+});
+
   const page = await browser.newPage();
 
   try {
@@ -814,4 +826,5 @@ module.exports = {
   safeClearAndType
 
 };
+
 
