@@ -538,29 +538,55 @@ async function sendEmailNotification(applicationNumber, latestDoc, type) {
   console.log(`📩 Email sent for ${type} ${applicationNumber}`);
 }
 
-/**
- * Send confirmation email when all matters are up to date
- */
+// /**
+//  * Send confirmation email when all matters are up to date
+//  */
+// async function sendConfirmationEmail(processedCount, totalCount) {
+//   await transporter.sendMail({
+//     from: process.env.EMAIL_USER,
+//     to: process.env.EMAIL_TO,
+//     subject: `USPTO Monitor: All Matters Up to Date`,
+//     html: `
+//       <h4>USPTO Monitoring Complete</h4>
+//       <p>All matters have been checked and are up to date.</p>
+//       <ul>
+//         <li><strong>Total Matters Checked:</strong> ${totalCount}</li>
+//         <li><strong>New Documents Found:</strong> ${processedCount}</li>
+//         <li><strong>Timestamp:</strong> ${new Date().toISOString()}</li>
+//       </ul>
+//       <p>Next check will run at the scheduled time.</p>
+//     `,
+//   });
+
+//   console.log(`📩 Confirmation email sent - ${processedCount} new documents out of ${totalCount} matters`);
+// }
+const sgMail = require('@sendgrid/mail');
+
 async function sendConfirmationEmail(processedCount, totalCount) {
-  await transporter.sendMail({
-    from: process.env.EMAIL_USER,
-    to: process.env.EMAIL_TO,
-    subject: `USPTO Monitor: All Matters Up to Date`,
-    html: `
-      <h4>USPTO Monitoring Complete</h4>
-      <p>All matters have been checked and are up to date.</p>
-      <ul>
-        <li><strong>Total Matters Checked:</strong> ${totalCount}</li>
-        <li><strong>New Documents Found:</strong> ${processedCount}</li>
-        <li><strong>Timestamp:</strong> ${new Date().toISOString()}</li>
-      </ul>
-      <p>Next check will run at the scheduled time.</p>
-    `,
-  });
+  try {
+    sgMail.setApiKey(process.env.SENDGRID_API_KEY);
+    
+    await sgMail.send({
+      from: 'automations@inspiredideasolutions.com',
+      to: 'automations@inspiredideasolutions.com',
+      subject: `USPTO Monitor: All Matters Up to Date`,
+      html: `
+        <h4>USPTO Monitoring Complete</h4>
+        <p>All matters have been checked and are up to date.</p>
+        <ul>
+          <li><strong>Total Matters Checked:</strong> ${totalCount}</li>
+          <li><strong>New Documents Found:</strong> ${processedCount}</li>
+          <li><strong>Timestamp:</strong> ${new Date().toISOString()}</li>
+        </ul>
+        <p>Next check will run at the scheduled time.</p>
+      `,
+    });
 
-  console.log(`📩 Confirmation email sent - ${processedCount} new documents out of ${totalCount} matters`);
+    console.log(`📩 Confirmation email sent - ${processedCount} new documents out of ${totalCount} matters`);
+  } catch (error) {
+    console.error('❌ Email failed:', error.message);
+  }
 }
-
 // ========================
 // 🚀 Main Processing Functions
 // ========================
@@ -751,4 +777,5 @@ module.exports = {
   // Utility functions
   loadMatterMap,
   safeClearAndType
+
 };
