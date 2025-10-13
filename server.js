@@ -447,7 +447,7 @@ app.get('/api/patent/:appNumber/documents', async (req, res) => {
       {
         headers: {
           'accept': 'application/json',
-          'X-API-KEY': process.env.USPTO_API_KEY || 'wbrvfnkztibwvbguoheyakqjlhgagv'
+          'X-API-KEY': process.env.Patent_USPTO_API_KEY
         }
       }
     );
@@ -485,7 +485,7 @@ app.get('/api/patent/download', async (req, res) => {
     const response = await axios.get(fileUrl, {
       responseType: 'stream',
       headers: {
-        'X-API-KEY': process.env.USPTO_API_KEY || 'wbrvfnkztibwvbguoheyakqjlhgagv'
+        'X-API-KEY': process.env.Patent_USPTO_API_KEY
       }
     });
 
@@ -576,6 +576,7 @@ app.listen(PORT, () => {
   console.log(`✅ Map file location: ${MAP_FILE_PATH}`);
 
 });
+
 
 
 
