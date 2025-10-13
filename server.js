@@ -382,14 +382,16 @@ app.post('/api/verify-otp', (req, res) => {
 
 app.get('/api/trademark/:serial', async (req, res) => {
   const { serial } = req.params;
-  console.log("API hit for serial:", serial);
+  console.log("🔍 Trademark API hit for serial:", serial);
 
   try {
     const response = await axios.get(`https://tsdrapi.uspto.gov/ts/cd/casedocs/bundle.xml?sn=${serial}`, {
       headers: {
         'USPTO-API-KEY': '5WFZ8ApIfVK4ZZKevqIGFn0WtgLVmw4w',
-        'Accept': 'application/xml'
-      }
+        'Accept': 'application/xml',
+        'User-Agent': 'Lawmatics-Automation/1.0'
+      },
+      timeout: 15000
     });
 
     // Handle XML parsing
@@ -424,14 +426,34 @@ app.get('/api/trademark/:serial', async (req, res) => {
             ? doc.UrlPathList.UrlPath[0]
             : null
       }));
-      
 
+      console.log(`✅ Found ${parsedDocs.length} trademark documents for ${serial}`);
       res.json({ documents: parsedDocs });
     });
     
   } catch (error) {
-    console.error('USPTO API error:', error.message);
-    res.status(500).json({ error: 'Failed to fetch documents from USPTO API' });
+    console.error('❌ Trademark API error for serial', serial, ':');
+    console.error('Error message:', error.message);
+    console.error('Status:', error.response?.status);
+    console.error('Response data:', error.response?.data);
+    
+    // Provide more specific error messages
+    if (error.response?.status === 404) {
+      res.status(404).json({ 
+        error: 'Trademark not found or access denied',
+        details: 'The USPTO API returned 404. This could be due to IP blocking, rate limiting, or invalid serial number.'
+      });
+    } else if (error.code === 'ECONNABORTED') {
+      res.status(408).json({ 
+        error: 'Request timeout',
+        details: 'The USPTO API took too long to respond.'
+      });
+    } else {
+      res.status(500).json({ 
+        error: 'Failed to fetch documents from USPTO API',
+        details: error.response?.data || error.message
+      });
+    }
   }
 });
 
@@ -576,6 +598,7 @@ app.listen(PORT, () => {
   console.log(`✅ Map file location: ${MAP_FILE_PATH}`);
 
 });
+
 
 
 
