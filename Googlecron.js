@@ -441,8 +441,6 @@ async function submitFormWithPuppeteer(matterId, applicationNumber, latestDoc, t
 
     const page = await browser.newPage();
 
-
-  try {
     console.log(` Opening Lawmatics form for ${type} #${applicationNumber}...`);
     await page.goto(FORM_URL, { waitUntil: "networkidle2" });
 
@@ -952,6 +950,7 @@ module.exports = {
   resetApplicationState,
   viewApplicationState
 };
+
 
 
 
