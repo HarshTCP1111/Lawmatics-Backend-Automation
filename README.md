@@ -14,18 +14,62 @@ The Lawmatics USPTO Automation System automates the process of monitoring tradem
 | ☁️ Integrations | [SendGrid](https://sendgrid.com/), [Lawmatics API](https://www.lawmatics.com/), [Google Drive API](https://developers.google.com/drive), [USPTO API](https://developer.uspto.gov/) | External integrations              |
 | 🔒 Auth         | OTP (email-based)                                                                                                                                                                  | Secure one-time access             |
 
-🔍 USPTO Integration — Real-time patent & trademark monitoring
+ - USPTO Integration — Real-time patent & trademark monitoring
+ Lawmatics CRM Automation — Auto-sync with Lawmatics records
+ Email Alerts — Instant SendGrid notifications for new docs
+ Google Drive Integration — Auto-upload & folder structuring
+ Scheduled Automation — Runs every 5 minutes via cron jobs
+ Manual Override — Process specific matters manually
+ OTP Authentication — Secure dashboard access
+ Live Dashboard — Realtime status tracking
 
-🤖 Lawmatics CRM Automation — Auto-sync with Lawmatics records
+System Architecture
++---------------------+        +------------------+        +-----------------+
+|   USPTO API Layer   | --->   |  Node.js Backend | --->   | Lawmatics CRM   |
+| (Trademarks/Patents)|        | (Automation Core)|        | (Prospect Sync) |
++---------------------+        +------------------+        +-----------------+
+         |                                 |
+         v                                 v
+  +---------------+                +-----------------+
+  | Google Drive  | <------------> | React Dashboard |
+  | (Doc Storage) |                | (Admin Control) |
+  +---------------+                +-----------------+
 
-📧 Email Alerts — Instant SendGrid notifications for new docs
+Core API Endpoints
 
-☁️ Google Drive Integration — Auto-upload & folder structuring
+| Area       | Method | Endpoint                           | Description          |
+| ---------- | ------ | ---------------------------------- | -------------------- |
+| Auth       | POST   | `/api/send-otp`                    | Send OTP to email    |
+| Auth       | POST   | `/api/verify-otp`                  | Verify OTP           |
+| Matter     | GET    | `/api/matters`                     | Retrieve all matters |
+| Matter     | POST   | `/api/matters`                     | Add new matter       |
+| USPTO      | GET    | `/api/trademark/:serial`           | Get trademark docs   |
+| USPTO      | GET    | `/api/patent/:appNumber/documents` | Get patent docs      |
+| Automation | POST   | `/api/automation/run-once`         | Run automation once  |
+| Debug      | GET    | `/api/automation/debug`            | Debug info           |
 
-⏰ Scheduled Automation — Runs every 5 minutes via cron jobs
+Automation Workflow
+for each matter in map.json:
+  1. Fetch USPTO documents
+  2. Compare with the last processed date
+  3. Download & upload to Google Drive
+  4. Update Lawmatics via API
+  5. Submit Lawmatics form (Puppeteer)
+  6. Send SendGrid notification
+  7. Update state & logs
 
-🧠 Manual Override — Process specific matters manually
+Monitoring & Logs
 
-🛡️ OTP Authentication — Secure dashboard access
+| Type             | Location                |
+| ---------------- | ----------------------- |
+| Backend Logs     | Render.com dashboard    |
+| Automation State | `/backend/state/`       |
+| Matter Records   | `map.json`              |
+| Debug            | `/api/automation/debug` |
 
-📊 Live Dashboard — Realtime status tracking
+⚖️ License
+Proprietary Software — © Inspired Idea Solutions.
+Unauthorized redistribution or modification is prohibited.
+
+
+
