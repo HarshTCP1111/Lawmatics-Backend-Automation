@@ -6,9 +6,10 @@ const fs = require('fs');
 const axios = require('axios');
 const nodemailer = require('nodemailer');
 const { parseStringPromise } = require('xml2js');
-const puppeteer = require("puppeteer");
 const { uploadToDrive } = require('./googleDrive');
 const sgMail = require('@sendgrid/mail');
+const puppeteer = require('puppeteer-core');
+const chromium = require('@sparticuz/chromium-min');
 
 // ========================
 // 🛠️ INITIAL SETUP
@@ -407,23 +408,39 @@ async function safeClearAndType(page, selector, value, timeout = 5000) {
 /**
  * Submit Lawmatics form with real USPTO data using Puppeteer
  */
-async function submitFormWithPuppeteer(matterId, applicationNumber, latestDoc, type, prospectData) {
-  // const browser = await puppeteer.launch({ 
-  //   headless: process.env.NODE_ENV === 'production' ? true : false 
-  // });
-  const browser = await puppeteer.launch({
-  headless: true,
-  args: [
-    '--no-sandbox',
-    '--disable-setuid-sandbox',
-    '--disable-dev-shm-usage',
-    '--disable-gpu',
-    '--no-zygote',
-    '--single-process'
-  ]
-});
+// async function submitFormWithPuppeteer(matterId, applicationNumber, latestDoc, type, prospectData) {
+//   // const browser = await puppeteer.launch({ 
+//   //   headless: process.env.NODE_ENV === 'production' ? true : false 
+//   // });
+//   const browser = await puppeteer.launch({
+//   headless: true,
+//   args: [
+//     '--no-sandbox',
+//     '--disable-setuid-sandbox',
+//     '--disable-dev-shm-usage',
+//     '--disable-gpu',
+//     '--no-zygote',
+//     '--single-process'
+//   ]
+// });
 
-  const page = await browser.newPage();
+//   const page = await browser.newPage();
+
+async function submitFormWithPuppeteer(matterId, applicationNumber, latestDoc, type, prospectData) {
+  let browser = null;
+  
+  try {
+    // Launch browser for Render
+    browser = await puppeteer.launch({
+      args: [...chromium.args, '--no-sandbox', '--disable-setuid-sandbox'],
+      defaultViewport: chromium.defaultViewport,
+      executablePath: await chromium.executablePath(),
+      headless: chromium.headless,
+      ignoreHTTPSErrors: true,
+    });
+
+    const page = await browser.newPage();
+
 
   try {
     console.log(` Opening Lawmatics form for ${type} #${applicationNumber}...`);
@@ -935,6 +952,7 @@ module.exports = {
   resetApplicationState,
   viewApplicationState
 };
+
 
 
 
