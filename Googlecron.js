@@ -663,15 +663,16 @@ async function processMatter(matter, lastProcessedState, todayDate) {
 
   // Check if this document is new
   const lastProcessedDate = lastProcessedState[applicationNumber];
+  const docDateStr = latestDoc.date.toISOString().split('T')[0];
   const isNew = isNewDocument(latestDoc.date, lastProcessedDate, todayDate);
 
   if (!isNew) {
-    console.log(`⏭️ Skipping ${type} #${applicationNumber} - document date ${latestDoc.date.toISOString().split('T')[0]} is not new`);
+    console.log(`⏭️ Skipping ${type} #${applicationNumber} - document date ${docDateStr} is not new (last processed: ${lastProcessedDate || 'never'})`);
     return { processed: false, reason: 'not_new', docDate: latestDoc.date };
   }
 
   console.log(`🆕 NEW document found for ${type} #${applicationNumber}:`);
-  console.log(`   Date: ${latestDoc.date.toISOString().split('T')[0]}`);
+  console.log(`   Date: ${docDateStr}`);
   console.log(`   Description: ${latestDoc.description}`);
   if (latestDoc.documentCode) console.log(`   Document Code: ${latestDoc.documentCode}`);
   if (latestDoc.category) console.log(`   Category: ${latestDoc.category}`);
@@ -694,8 +695,8 @@ async function processMatter(matter, lastProcessedState, todayDate) {
     console.log(`⚠️ Could not fetch prospect data for ${lawmaticsID}, skipping form submission`);
   }
 
-  // Update the last processed date for this application
-  lastProcessedState[applicationNumber] = todayDate;
+  // ✅ CRITICAL FIX: Update with the ACTUAL document date, not today's date
+  lastProcessedState[applicationNumber] = docDateStr; // ← Store document date, not today's date
 
   return { processed: true, docDate: latestDoc.date };
 }
@@ -798,7 +799,49 @@ if (process.argv.includes('--run-now')) {
 // ========================
 // 📤 EXPORTS
 // ========================
+// ========================
+// 🐛 DEBUG FUNCTIONS
+// ========================
 
+/**
+ * Reset state for specific applications (for debugging)
+ */
+async function resetApplicationState(applicationNumber) {
+  const lastProcessedState = await loadLastProcessedState();
+  if (lastProcessedState[applicationNumber]) {
+    delete lastProcessedState[applicationNumber];
+    await saveLastProcessedState(lastProcessedState);
+    console.log(`✅ Reset state for application ${applicationNumber}`);
+  }
+}
+
+/**
+ * View current state for debugging
+ */
+async function viewApplicationState(applicationNumber) {
+  const lastProcessedState = await loadLastProcessedState();
+  console.log(`📊 State for ${applicationNumber}:`, lastProcessedState[applicationNumber] || 'never processed');
+}
+
+// ========================
+// 🧪 DEBUG COMMANDS
+// ========================
+
+if (process.argv.includes('--reset-state')) {
+  const appNumber = process.argv[process.argv.indexOf('--reset-state') + 1];
+  (async () => {
+    await resetApplicationState(appNumber);
+    process.exit(0);
+  })();
+}
+
+if (process.argv.includes('--view-state')) {
+  const appNumber = process.argv[process.argv.indexOf('--view-state') + 1];
+  (async () => {
+    await viewApplicationState(appNumber);
+    process.exit(0);
+  })();
+}
 module.exports = {
   // Main processing functions
   processMatter,
@@ -823,9 +866,13 @@ module.exports = {
   
   // Utility functions
   loadMatterMap,
-  safeClearAndType
-
+  safeClearAndType,
+  
+  // Debug functions
+  resetApplicationState,
+  viewApplicationState
 };
+
 
 
 
