@@ -106,13 +106,14 @@ function isNewDocument(docDate, lastProcessedDate, todayDate) {
   
   // If we have a last processed date, compare with that
   if (lastProcessedDate) {
+    // Only process if the document date is STRICTLY newer than last processed
+    // This prevents reprocessing the same document
     return docDateStr > lastProcessedDate;
   }
   
-  // Otherwise, only process documents from today
-  return docDateStr === todayDate;
+  // Otherwise, only process documents from today or future
+  return docDateStr >= todayDate;
 }
-
 // ========================
 // 🔧 Core Functions
 // ========================
@@ -239,7 +240,7 @@ async function downloadAndUploadToDrive(applicationNumber, latestDoc, type) {
     let response;
     if (type === "Patent") {
       // Use proxy for patent documents to handle authentication
-      const proxyUrl = `http://localhost:5000/api/patent/download?url=${encodeURIComponent(latestDoc.link)}`;
+      const proxyUrl = `https://lawmatics-backend.onrender.com/api/patent/download?url=${encodeURIComponent(latestDoc.link)}`;
       response = await axios.get(proxyUrl, {
         responseType: 'arraybuffer',
         timeout: 30000
@@ -842,6 +843,68 @@ if (process.argv.includes('--view-state')) {
     process.exit(0);
   })();
 }
+// ========================
+// 🧪 TEST MODE: Single Matter Full Run
+// ========================
+if (process.argv.includes('--test-one')) {
+  const appNumber = process.argv[process.argv.indexOf('--test-one') + 1];
+  (async () => {
+    console.log(`🧪 Running full test for application ${appNumber}...`);
+
+    try {
+      // 1️⃣ Load all matters
+      const allMatters = await loadMatterMap();
+      const matter = allMatters.find(m => m.applicationNumber === appNumber);
+      if (!matter) {
+        console.error(`❌ Matter ${appNumber} not found in map.json`);
+        process.exit(1);
+      }
+
+      // 2️⃣ Use REAL state, not fake state
+      const lastProcessedState = await loadLastProcessedState();
+      const todayDate = getTodayDateKey();
+
+      console.log(`📊 Current state for ${appNumber}:`, lastProcessedState[appNumber] || 'never processed');
+
+      // 3️⃣ Run the main process for this matter
+      const result = await processMatter(matter, lastProcessedState, todayDate);
+
+      // 4️⃣ ✅ SAVE THE STATE in test mode too!
+      await saveLastProcessedState(lastProcessedState);
+
+      console.log('✅ Full process test completed successfully.');
+      console.log('Result:', result);
+      console.log(`📊 New state for ${appNumber}:`, lastProcessedState[appNumber]);
+    } catch (err) {
+      console.error('❌ Test run failed:', err);
+    } finally {
+      process.exit(0);
+    }
+  })();
+}
+// ========================
+// 🛡️ GRACEFUL SHUTDOWN HANDLING
+// ========================
+
+process.on('SIGINT', () => {
+  console.log('🛑 Received SIGINT. Shutting down gracefully...');
+  process.exit(0);
+});
+
+process.on('SIGTERM', () => {
+  console.log('🛑 Received SIGTERM. Shutting down gracefully...');
+  process.exit(0);
+});
+
+process.on('uncaughtException', (error) => {
+  console.error('❌ Uncaught Exception:', error);
+  // Don't exit - let the process continue running
+});
+
+process.on('unhandledRejection', (reason, promise) => {
+  console.error('❌ Unhandled Rejection at:', promise, 'reason:', reason);
+  // Don't exit - let the process continue running
+});
 module.exports = {
   // Main processing functions
   processMatter,
@@ -872,6 +935,7 @@ module.exports = {
   resetApplicationState,
   viewApplicationState
 };
+
 
 
 
