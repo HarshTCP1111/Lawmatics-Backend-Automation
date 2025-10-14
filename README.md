@@ -23,18 +23,6 @@ The Lawmatics USPTO Automation System automates the process of monitoring tradem
  - OTP Authentication — Secure dashboard access
  - Live Dashboard — Real-time status tracking
 
-System Architecture
-+---------------------+        +------------------+        +-----------------+
-|   USPTO API Layer   | --->   |  Node.js Backend | --->   | Lawmatics CRM   |
-| (Trademarks/Patents)|        | (Automation Core)|        | (Prospect Sync) |
-+---------------------+        +------------------+        +-----------------+
-         |                                 |
-         v                                 v
-  +---------------+                +-----------------+
-  | Google Drive  | <------------> | React Dashboard |
-  | (Doc Storage) |                | (Admin Control) |
-  +---------------+                +-----------------+
-
 Core API Endpoints
 
 | Area       | Method | Endpoint                           | Description          |
@@ -70,6 +58,7 @@ Monitoring & Logs
 ⚖️ License
 Proprietary Software — © Inspired Idea Solutions.
 Unauthorized redistribution or modification is prohibited.
+
 
 
 
