@@ -154,6 +154,7 @@ class AutomationController {
   }
 
   // Process single matter
+    // Process single matter
   async processSingleMatter(lawmaticsId) {
     if (this.currentlyProcessing.has(lawmaticsId)) {
       return { success: false, message: 'Matter is already being processed' };
@@ -442,5 +443,6 @@ process.on('SIGTERM', () => {
   automationController.destroy();
   process.exit(0);
 });
+
 
 module.exports = automationController;
