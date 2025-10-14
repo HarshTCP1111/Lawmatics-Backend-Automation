@@ -15,13 +15,13 @@ The Lawmatics USPTO Automation System automates the process of monitoring tradem
 | 🔒 Auth         | OTP (email-based)                                                                                                                                                                  | Secure one-time access             |
 
  - USPTO Integration — Real-time patent & trademark monitoring
- Lawmatics CRM Automation — Auto-sync with Lawmatics records
- Email Alerts — Instant SendGrid notifications for new docs
- Google Drive Integration — Auto-upload & folder structuring
- Scheduled Automation — Runs every 5 minutes via cron jobs
- Manual Override — Process specific matters manually
- OTP Authentication — Secure dashboard access
- Live Dashboard — Realtime status tracking
+ - Lawmatics CRM Automation — Auto-sync with Lawmatics records
+ - Email Alerts — Instant SendGrid notifications for new docs
+ - Google Drive Integration — Auto-upload & folder structuring
+ - Scheduled Automation — Runs every 5 minutes via cron jobs
+ - Manual Override — Process specific matters manually
+ - OTP Authentication — Secure dashboard access
+ - Live Dashboard — Real-time status tracking
 
 System Architecture
 +---------------------+        +------------------+        +-----------------+
@@ -70,6 +70,7 @@ Monitoring & Logs
 ⚖️ License
 Proprietary Software — © Inspired Idea Solutions.
 Unauthorized redistribution or modification is prohibited.
+
 
 
 
