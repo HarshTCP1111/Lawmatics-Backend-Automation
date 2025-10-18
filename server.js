@@ -248,7 +248,7 @@ const transporter = nodemailer.createTransport({
     pass: process.env.EMAIL_PASS,
   },
 });
-Replace your current transporter with this:
+// Replace your current transporter with this:
 
 // Generate random 6-digit OTP
 function generateOTP() {
@@ -598,6 +598,7 @@ app.listen(PORT, () => {
   console.log(`✅ Map file location: ${MAP_FILE_PATH}`);
 
 });
+
 
 
 
