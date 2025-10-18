@@ -240,7 +240,7 @@ mongoose.connect(process.env.MONGO_URI, {
 // In-memory storage for OTPs (in production, use a database)
 const otpStorage = {};
 
-Configure nodemailer transporter
+// Configure nodemailer transporter
 const transporter = nodemailer.createTransport({
   service: 'gmail',
   auth: {
@@ -250,7 +250,7 @@ const transporter = nodemailer.createTransport({
 });
 Replace your current transporter with this:
 
-Generate random 6-digit OTP
+// Generate random 6-digit OTP
 function generateOTP() {
   return Math.floor(100000 + Math.random() * 900000).toString();
 }
@@ -362,20 +362,20 @@ app.post('/api/verify-otp', (req, res) => {
 // });
 
 // Verify OTP endpoint (unchanged)
-app.post('/api/verify-otp', (req, res) => {
-  const { email, otp } = req.body;
+// app.post('/api/verify-otp', (req, res) => {
+//   const { email, otp } = req.body;
 
-  if (!isValidEmail(email)) {
-    return res.status(403).json({ error: 'Access denied. Invalid email.' });
-  }
+//   if (!isValidEmail(email)) {
+//     return res.status(403).json({ error: 'Access denied. Invalid email.' });
+//   }
 
-  if (otpStorage[email] === otp) {
-    delete otpStorage[email];
-    res.json({ success: true, message: 'OTP verified successfully' });
-  } else {
-    res.status(401).json({ error: 'Invalid OTP' });
-  }
-});
+//   if (otpStorage[email] === otp) {
+//     delete otpStorage[email];
+//     res.json({ success: true, message: 'OTP verified successfully' });
+//   } else {
+//     res.status(401).json({ error: 'Invalid OTP' });
+//   }
+// });
 // ========================
 // 📄 USPTO API ROUTES
 // ========================
@@ -598,6 +598,7 @@ app.listen(PORT, () => {
   console.log(`✅ Map file location: ${MAP_FILE_PATH}`);
 
 });
+
 
 
 
