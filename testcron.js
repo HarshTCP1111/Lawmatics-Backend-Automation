@@ -20,7 +20,7 @@ const {
 } = require('./Googlecron.js');
 
 // Import puppeteer separately since we're overriding the function
-const puppeteer = require("puppeteer");
+const puppeteer = require("puppeteer-core");
 
 app.use(express.json());
 
@@ -30,6 +30,63 @@ const FORM_URL = "https://app.lawmatics.com/forms/update-by-id/d2ab9a6a-2800-41f
 // ========================
 // 🔧 OVERRIDDEN FUNCTIONS FOR CLOUD RUN
 // ========================
+
+/**
+ * Helper function to safely clear and type into a field
+ */
+async function safeClearAndType(page, selector, value, timeout = 5000) {
+  try {
+    await page.waitForSelector(selector, { timeout, visible: true });
+    
+    // Focus on the field
+    await page.click(selector);
+    
+    // Multiple methods to clear the field
+    try {
+      // Method 1: Select all text and delete
+      await page.click(selector, { clickCount: 3 });
+      await page.keyboard.press('Backspace');
+    } catch (error) {
+      // Method 2: Use keyboard shortcuts (Ctrl+A or Cmd+A)
+      const isMac = await page.evaluate(() => navigator.platform.toLowerCase().includes('mac'));
+      const modifierKey = isMac ? 'Meta' : 'Control';
+      
+      await page.keyboard.down(modifierKey);
+      await page.keyboard.press('a');
+      await page.keyboard.up(modifierKey);
+      await page.keyboard.press('Backspace');
+    }
+    
+    // Wait a bit to ensure field is cleared
+    await new Promise(r => setTimeout(r, 300));
+    
+    // Method 3: Directly set the value via JavaScript as fallback
+    const currentValue = await page.$eval(selector, el => el.value);
+    if (currentValue) {
+      await page.evaluate((sel) => {
+        document.querySelector(sel).value = '';
+      }, selector);
+    }
+    
+    // Type new value character by character with small delays
+    await page.type(selector, value, { delay: 50 });
+    
+    // Verify the value was set correctly
+    const finalValue = await page.$eval(selector, el => el.value);
+    if (finalValue !== value) {
+      console.warn(` Value mismatch for ${selector}. Expected: ${value}, Got: ${finalValue}`);
+      // Try one more time with direct JavaScript
+      await page.evaluate((sel, val) => {
+        document.querySelector(sel).value = val;
+      }, selector, value);
+    }
+    
+    return true;
+  } catch (error) {
+    console.warn(` Field not found or error clearing: ${selector}`, error.message);
+    return false;
+  }
+}
 
 /**
  * Cloud Run compatible Puppeteer configuration
@@ -104,7 +161,7 @@ async function submitFormWithPuppeteer(matterId, applicationNumber, latestDoc, t
         description: "Patent Document Description"
       },
       {
-        selector: 'input[name="Q3VzdG9tRm9ybUNvbXBvbmVudDo6QWR2YW5jZWQtZ2VuZXJhbF9maWVsZC1lOWYxN2U2Zi03YTU0LTQ1YTMtYjNjYS1hMDcxMzAzMjcyZDQ="]',
+        selector: 'input[name="Q3VzdG9tRm9ybUNvbXBvbmVudDo6QWR2YW5jZWQtZ2VuZXJhbF9maWVsZC1lOWYxN2U2Zi03YTU4LTQ1YTMtYjNjYS1hMDcxMzAzMjcyZDQ="]',
         value: documentLink,
         description: "File/Document Link (Google Drive)"
       }
@@ -150,70 +207,19 @@ async function submitFormWithPuppeteer(matterId, applicationNumber, latestDoc, t
 
     await new Promise(r => setTimeout(r, 5000));
     
+    // ✅ Return true to indicate SUCCESS
+    console.log(`🎯 FORM SUBMISSION COMPLETED SUCCESSFULLY for ${type} #${applicationNumber}`);
+    return true;
+    
   } catch (err) {
     console.error(`❌ Puppeteer submission failed for ${applicationNumber}:`, err.message);
+    // ✅ Return false to indicate FAILURE
+    return false;
   } finally {
     // Safely close browser only if it exists
     if (browser) {
       await browser.close().catch(e => console.warn('Browser close warning:', e.message));
     }
-  }
-}
-
-/**
- * Helper function to safely clear and type into a field
- */
-async function safeClearAndType(page, selector, value, timeout = 5000) {
-  try {
-    await page.waitForSelector(selector, { timeout, visible: true });
-    
-    // Focus on the field
-    await page.click(selector);
-    
-    // Multiple methods to clear the field
-    try {
-      // Method 1: Select all text and delete
-      await page.click(selector, { clickCount: 3 });
-      await page.keyboard.press('Backspace');
-    } catch (error) {
-      // Method 2: Use keyboard shortcuts (Ctrl+A or Cmd+A)
-      const isMac = await page.evaluate(() => navigator.platform.toLowerCase().includes('mac'));
-      const modifierKey = isMac ? 'Meta' : 'Control';
-      
-      await page.keyboard.down(modifierKey);
-      await page.keyboard.press('a');
-      await page.keyboard.up(modifierKey);
-      await page.keyboard.press('Backspace');
-    }
-    
-    // Wait a bit to ensure field is cleared
-    await new Promise(r => setTimeout(r, 300));
-    
-    // Method 3: Directly set the value via JavaScript as fallback
-    const currentValue = await page.$eval(selector, el => el.value);
-    if (currentValue) {
-      await page.evaluate((sel) => {
-        document.querySelector(sel).value = '';
-      }, selector);
-    }
-    
-    // Type new value character by character with small delays
-    await page.type(selector, value, { delay: 50 });
-    
-    // Verify the value was set correctly
-    const finalValue = await page.$eval(selector, el => el.value);
-    if (finalValue !== value) {
-      console.warn(` Value mismatch for ${selector}. Expected: ${value}, Got: ${finalValue}`);
-      // Try one more time with direct JavaScript
-      await page.evaluate((sel, val) => {
-        document.querySelector(sel).value = val;
-      }, selector, value);
-    }
-    
-    return true;
-  } catch (error) {
-    console.warn(` Field not found or error clearing: ${selector}`, error.message);
-    return false;
   }
 }
 
@@ -262,21 +268,33 @@ async function processMatterForced(applicationNumber) {
     console.log(`   Link: ${latestDoc.link}`);
 
     // Download and upload to Google Drive
+    console.log(`📥 Downloading and uploading to Google Drive...`);
     latestDoc = await downloadAndUploadToDrive(applicationNumber, latestDoc, type);
 
     // Send email notification
+    console.log(`📧 Sending email notification...`);
     await sendEmailNotification(applicationNumber, latestDoc, type);
 
     // Update Lawmatics via API
+    console.log(`🔄 Updating Lawmatics via API...`);
     await updateLawmaticsProspect(lawmaticsID, applicationNumber, latestDoc, type);
 
-    // Get prospect data and submit form via Puppeteer
+    // ✅ STRICTLY REQUIRE FORM SUBMISSION - If this fails, the whole process fails
+    console.log(`👤 Fetching prospect data for form submission...`);
     const prospectData = await getProspect(lawmaticsID);
-    if (prospectData) {
-      await submitFormWithPuppeteer(lawmaticsID, applicationNumber, latestDoc, type, prospectData);
-    } else {
-      console.log(`⚠️ Could not fetch prospect data for ${lawmaticsID}, skipping form submission`);
+    if (!prospectData) {
+      throw new Error(`❌ Could not fetch prospect data for ${lawmaticsID}, cannot submit form`);
     }
+
+    // ✅ Wait for form submission and throw error if it fails
+    console.log(`📝 Starting form submission via Puppeteer...`);
+    const formSubmitted = await submitFormWithPuppeteer(lawmaticsID, applicationNumber, latestDoc, type, prospectData);
+    
+    if (!formSubmitted) {
+      throw new Error(`❌ Form submission failed for ${type} #${applicationNumber}`);
+    }
+
+    console.log(`🎉 COMPLETED: All steps successful for ${type} #${applicationNumber}`);
 
     return {
       success: true,
@@ -287,7 +305,7 @@ async function processMatterForced(applicationNumber) {
       documentCode: latestDoc.documentCode || 'N/A',
       category: latestDoc.category || 'N/A',
       driveLink: latestDoc.driveLink || latestDoc.link,
-      message: `Successfully processed ${type} #${applicationNumber}`
+      message: `Successfully processed ${type} #${applicationNumber} including form submission`
     };
 
   } catch (error) {
