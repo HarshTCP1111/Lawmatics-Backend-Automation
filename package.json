@@ -16,6 +16,7 @@
   "description": "",
   "dependencies": {
     "@sendgrid/mail": "^8.1.6",
+    "@sparticuz/chromium-min": "^141.0.0",
     "axios": "^1.12.2",
     "cors": "^2.8.5",
     "dotenv": "^17.2.2",
@@ -25,8 +26,7 @@
     "mongoose": "^8.16.0",
     "node-cron": "^4.1.0",
     "nodemailer": "^7.0.6",
-    "puppeteer-core": "^24.22.0",
-    "@sparticuz/chromium-min": "^141.0.0",
+    "puppeteer-core": "^24.25.0",
     "qs": "^6.14.0",
     "xml2js": "^0.6.2"
   }
