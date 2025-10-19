@@ -6,9 +6,9 @@
     "test": "echo \"Error: no test specified\" && exit 1",
     "start": "node Googlecron.js",
     "dev": "nodemon Googlecron.js",
-    "dev-test": "nodemon test_cron.js",
+    "dev-test": "nodemon testcron.js",
     "cron": "node cron.js",
-    "test-cron": "node test_cron.js"
+    "test-cron": "node testcron.js"
   },
   "keywords": [],
   "author": "",
