@@ -20,7 +20,7 @@ const {
 } = require('./Googlecron.js');
 
 // Import puppeteer separately since we're overriding the function
-const puppeteer = require("puppeteer-core");
+const puppeteer = require("puppeteer");
 
 app.use(express.json());
 
@@ -91,13 +91,16 @@ async function safeClearAndType(page, selector, value, timeout = 5000) {
 /**
  * Cloud Run compatible Puppeteer configuration
  */
+/**
+ * Cloud Run compatible Puppeteer configuration
+ */
 async function submitFormWithPuppeteer(matterId, applicationNumber, latestDoc, type, prospectData) {
   let browser;
   try {
     console.log(`🖥️ Launching Puppeteer for ${type} #${applicationNumber}...`);
     
     // Cloud Run compatible Puppeteer configuration
-    browser = await puppeteer.launch({
+    const puppeteerOptions = {
       headless: true,
       args: [
         '--no-sandbox',
@@ -110,9 +113,18 @@ async function submitFormWithPuppeteer(matterId, applicationNumber, latestDoc, t
         '--disable-background-timer-throttling',
         '--disable-backgrounding-occluded-windows',
         '--disable-renderer-backgrounding'
-      ],
-      executablePath: process.env.CHROMIUM_PATH || undefined
+      ]
+    };
+
+    // For Cloud Run, use the system Chrome (from Dockerfile installation)
+    puppeteerOptions.executablePath = '/usr/bin/google-chrome-stable';
+
+    console.log(`🔧 Puppeteer options:`, { 
+      executablePath: puppeteerOptions.executablePath,
+      headless: puppeteerOptions.headless 
     });
+
+    browser = await puppeteer.launch(puppeteerOptions);
 
     const page = await browser.newPage();
     
@@ -167,28 +179,12 @@ async function submitFormWithPuppeteer(matterId, applicationNumber, latestDoc, t
       }
     ];
 
-    // Add patent-specific fields if it's a patent
-    if (type === "Patent") {
-      fieldsToFill.push(
-        {
-          selector: 'input[name="RmllbGRzOjpDdXN0b21GaWVsZC1DdXN0b21GaWVsZDo6UHJvc3BlY3QtNjMzOTQw"]',
-          value: (latestDoc.documentCode && latestDoc.documentCode !== "N/A") ? latestDoc.documentCode : "",
-          description: "Patent Document Code"
-        },
-        {
-          selector: 'input[name="RmllbGRzOjpDdXN0b21GaWVsZC1DdXN0b21GaWVsZDo6UHJvc3BlY3QtNjI0NzE1"]',
-          value: (latestDoc.category && latestDoc.category !== "N/A") ? latestDoc.category : "",
-          description: "Category"
-        }
-      );
-    }
-
     // Fill all fields
     for (const field of fieldsToFill) {
       if (field.value) {
         console.log(`   Filling ${field.description}...`);
         await safeClearAndType(page, field.selector, field.value);
-        await new Promise(r => setTimeout(r, 300)); // Small delay between fields
+        await new Promise(r => setTimeout(r, 300));
       }
     }
 
