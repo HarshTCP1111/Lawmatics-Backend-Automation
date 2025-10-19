@@ -8,7 +8,7 @@ const nodemailer = require('nodemailer');
 const { parseStringPromise } = require('xml2js');
 const { uploadToDrive } = require('./googleDrive');
 const sgMail = require('@sendgrid/mail');
-const puppeteer = require('puppeteer-core');
+const puppeteer = require('puppeteer');
 const chromium = require('@sparticuz/chromium-min');
 
 // ========================

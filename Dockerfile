@@ -1,9 +1,10 @@
 # Use Node 20 base image
 FROM node:20-slim
 
-# Install system dependencies required for Chromium
+# Install system dependencies AND Chromium
 RUN apt-get update && apt-get install -y \
   wget \
+  gnupg \
   ca-certificates \
   fonts-liberation \
   libasound2 \
@@ -20,6 +21,10 @@ RUN apt-get update && apt-get install -y \
   libxrandr2 \
   xdg-utils \
   libgbm1 \
+  chromium \
+  chromium-common \
+  chromium-driver \
+  --no-install-recommends \
   && rm -rf /var/lib/apt/lists/*
 
 # Create app directory
@@ -35,10 +40,11 @@ COPY . .
 # Set environment variables
 ENV NODE_ENV=production
 ENV PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true
+ENV PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium
 ENV PORT=8080
 
 # Expose port
 EXPOSE 8080
 
 # Start your app
-CMD ["node", "server.js"]
+CMD ["npm", "run", "test-cron"]

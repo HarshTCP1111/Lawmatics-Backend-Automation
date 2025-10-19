@@ -19,8 +19,8 @@ const {
   getTodayDateKey
 } = require('./Googlecron.js');
 
-// Import puppeteer separately since we're overriding the function
-const puppeteer = require("puppeteer");
+// Use puppeteer-core since we're installing Chromium separately
+const puppeteer = require("puppeteer-core");
 
 app.use(express.json());
 
@@ -89,17 +89,14 @@ async function safeClearAndType(page, selector, value, timeout = 5000) {
 }
 
 /**
- * Cloud Run compatible Puppeteer configuration
- */
-/**
- * Cloud Run compatible Puppeteer configuration
+ * Cloud Run compatible Puppeteer configuration with Chromium
  */
 async function submitFormWithPuppeteer(matterId, applicationNumber, latestDoc, type, prospectData) {
   let browser;
   try {
-    console.log(`🖥️ Launching Puppeteer for ${type} #${applicationNumber}...`);
+    console.log(`🖥️ Launching Puppeteer with Chromium for ${type} #${applicationNumber}...`);
     
-    // Cloud Run compatible Puppeteer configuration
+    // Cloud Run compatible Puppeteer configuration with Chromium
     const puppeteerOptions = {
       headless: true,
       args: [
@@ -112,32 +109,33 @@ async function submitFormWithPuppeteer(matterId, applicationNumber, latestDoc, t
         '--disable-features=VizDisplayCompositor',
         '--disable-background-timer-throttling',
         '--disable-backgrounding-occluded-windows',
-        '--disable-renderer-backgrounding'
-      ]
+        '--disable-renderer-backgrounding',
+        '--window-size=1920,1080'
+      ],
+      // Use Chromium path from Dockerfile installation
+      executablePath: process.env.PUPPETEER_EXECUTABLE_PATH || '/usr/bin/chromium'
     };
 
-    // For Cloud Run, use the system Chrome (from Dockerfile installation)
-    puppeteerOptions.executablePath = '/usr/bin/google-chrome-stable';
-
-    console.log(`🔧 Puppeteer options:`, { 
-      executablePath: puppeteerOptions.executablePath,
-      headless: puppeteerOptions.headless 
-    });
-
+    console.log(`🔧 Launching Chromium from: ${puppeteerOptions.executablePath}`);
+    
     browser = await puppeteer.launch(puppeteerOptions);
+    console.log(`✅ Chromium launched successfully`);
 
     const page = await browser.newPage();
     
-    // Set longer timeouts for Cloud Run
+    // Set viewport and timeouts for Cloud Run
+    await page.setViewport({ width: 1920, height: 1080 });
     await page.setDefaultNavigationTimeout(60000);
     await page.setDefaultTimeout(60000);
 
     console.log(`🌐 Opening Lawmatics form for ${type} #${applicationNumber}...`);
     await page.goto(FORM_URL, { waitUntil: "networkidle2", timeout: 60000 });
+    console.log(`✅ Page loaded successfully`);
 
     // Step 1: Enter Matter ID
     await page.waitForSelector("#id", { visible: true, timeout: 10000 });
     await safeClearAndType(page, "#id", matterId);
+    console.log(`✅ Entered Matter ID: ${matterId}`);
 
     // Step 2: Click "Find Matter"
     await page.click('button[type="submit"]');
@@ -179,14 +177,33 @@ async function submitFormWithPuppeteer(matterId, applicationNumber, latestDoc, t
       }
     ];
 
+    // Add patent-specific fields if it's a patent
+    if (type === "Patent") {
+      fieldsToFill.push(
+        {
+          selector: 'input[name="RmllbGRzOjpDdXN0b21GaWVsZC1DdXN0b21GaWVsZDo6UHJvc3BlY3QtNjMzOTQw"]',
+          value: (latestDoc.documentCode && latestDoc.documentCode !== "N/A") ? latestDoc.documentCode : "",
+          description: "Patent Document Code"
+        },
+        {
+          selector: 'input[name="RmllbGRzOjpDdXN0b21GaWVsZC1DdXN0b21GaWVsZDo6UHJvc3BlY3QtNjI0NzE1"]',
+          value: (latestDoc.category && latestDoc.category !== "N/A") ? latestDoc.category : "",
+          description: "Category"
+        }
+      );
+    }
+
     // Fill all fields
+    let filledFields = 0;
     for (const field of fieldsToFill) {
       if (field.value) {
         console.log(`   Filling ${field.description}...`);
-        await safeClearAndType(page, field.selector, field.value);
+        const filled = await safeClearAndType(page, field.selector, field.value);
+        if (filled) filledFields++;
         await new Promise(r => setTimeout(r, 300));
       }
     }
+    console.log(`✅ Filled ${filledFields} out of ${fieldsToFill.length} fields`);
 
     // Step 4: Submit
     console.log("📩 Submitting form...");
@@ -201,6 +218,7 @@ async function submitFormWithPuppeteer(matterId, applicationNumber, latestDoc, t
       console.log(`✅ Form submitted for ${type} #${applicationNumber}`);
     }
 
+    // Wait for submission to complete
     await new Promise(r => setTimeout(r, 5000));
     
     // ✅ Return true to indicate SUCCESS
