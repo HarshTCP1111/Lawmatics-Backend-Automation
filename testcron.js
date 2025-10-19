@@ -14,13 +14,212 @@ const {
   downloadAndUploadToDrive,
   getProspect,
   updateLawmaticsProspect,
-  submitFormWithPuppeteer,
   sendEmailNotification,
   loadLastProcessedState,
   getTodayDateKey
 } = require('./Googlecron.js');
 
+// Import puppeteer separately since we're overriding the function
+const puppeteer = require("puppeteer");
+
 app.use(express.json());
+
+// Form configuration (needed for the overridden function)
+const FORM_URL = "https://app.lawmatics.com/forms/update-by-id/d2ab9a6a-2800-41f3-a4ba-51feedbf02b3";
+
+// ========================
+// 🔧 OVERRIDDEN FUNCTIONS FOR CLOUD RUN
+// ========================
+
+/**
+ * Cloud Run compatible Puppeteer configuration
+ */
+async function submitFormWithPuppeteer(matterId, applicationNumber, latestDoc, type, prospectData) {
+  let browser;
+  try {
+    console.log(`🖥️ Launching Puppeteer for ${type} #${applicationNumber}...`);
+    
+    // Cloud Run compatible Puppeteer configuration
+    browser = await puppeteer.launch({
+      headless: true,
+      args: [
+        '--no-sandbox',
+        '--disable-setuid-sandbox',
+        '--disable-dev-shm-usage',
+        '--disable-gpu',
+        '--no-zygote',
+        '--single-process',
+        '--disable-features=VizDisplayCompositor',
+        '--disable-background-timer-throttling',
+        '--disable-backgrounding-occluded-windows',
+        '--disable-renderer-backgrounding'
+      ],
+      executablePath: process.env.CHROMIUM_PATH || undefined
+    });
+
+    const page = await browser.newPage();
+    
+    // Set longer timeouts for Cloud Run
+    await page.setDefaultNavigationTimeout(60000);
+    await page.setDefaultTimeout(60000);
+
+    console.log(`🌐 Opening Lawmatics form for ${type} #${applicationNumber}...`);
+    await page.goto(FORM_URL, { waitUntil: "networkidle2", timeout: 60000 });
+
+    // Step 1: Enter Matter ID
+    await page.waitForSelector("#id", { visible: true, timeout: 10000 });
+    await safeClearAndType(page, "#id", matterId);
+
+    // Step 2: Click "Find Matter"
+    await page.click('button[type="submit"]');
+    console.log("⏳ Waiting for Lawmatics to fetch matter details...");
+    await new Promise(r => setTimeout(r, 15000));
+
+    // Step 3: Fill USPTO fields
+    console.log(" Filling USPTO details...");
+    
+    // Use Google Drive link if available, otherwise use original link
+    const documentLink = latestDoc.driveLink || latestDoc.link || "";
+    
+    // Define all fields to fill
+    const fieldsToFill = [
+      {
+        selector: 'input[name="RmllbGRzOjpDdXN0b21GaWVsZC1DdXN0b21GaWVsZDo6UHJvc3BlY3QtMzE0NzM="]',
+        value: applicationNumber,
+        description: "Application Number"
+      },
+      {
+        selector: 'input[name="RmllbGRzOjpDdXN0b21GaWVsZC1DdXN0b21GaWVsZDo6UHJvc3BlY3QtNTQ5Mzgy"]',
+        value: latestDoc.date ? latestDoc.date.toISOString().split("T")[0] : "",
+        description: "Mailroom Date"
+      },
+      {
+        selector: 'input[name="RmllbGRzOjpDdXN0b21GaWVsZC1DdXN0b21GaWVsZDo6UHJvc3BlY3QtNjI0NzA3"]',
+        value: latestDoc.description || "",
+        description: "Document Description"
+      },
+      {
+        selector: 'input[name="RmllbGRzOjpDdXN0b21GaWVsZC1DdXN0b21GaWVsZDo6UHJvc3BlY3QtNjMzOTM5"]',
+        value: latestDoc.description || "",
+        description: "Patent Document Description"
+      },
+      {
+        selector: 'input[name="Q3VzdG9tRm9ybUNvbXBvbmVudDo6QWR2YW5jZWQtZ2VuZXJhbF9maWVsZC1lOWYxN2U2Zi03YTU0LTQ1YTMtYjNjYS1hMDcxMzAzMjcyZDQ="]',
+        value: documentLink,
+        description: "File/Document Link (Google Drive)"
+      }
+    ];
+
+    // Add patent-specific fields if it's a patent
+    if (type === "Patent") {
+      fieldsToFill.push(
+        {
+          selector: 'input[name="RmllbGRzOjpDdXN0b21GaWVsZC1DdXN0b21GaWVsZDo6UHJvc3BlY3QtNjMzOTQw"]',
+          value: (latestDoc.documentCode && latestDoc.documentCode !== "N/A") ? latestDoc.documentCode : "",
+          description: "Patent Document Code"
+        },
+        {
+          selector: 'input[name="RmllbGRzOjpDdXN0b21GaWVsZC1DdXN0b21GaWVsZDo6UHJvc3BlY3QtNjI0NzE1"]',
+          value: (latestDoc.category && latestDoc.category !== "N/A") ? latestDoc.category : "",
+          description: "Category"
+        }
+      );
+    }
+
+    // Fill all fields
+    for (const field of fieldsToFill) {
+      if (field.value) {
+        console.log(`   Filling ${field.description}...`);
+        await safeClearAndType(page, field.selector, field.value);
+        await new Promise(r => setTimeout(r, 300)); // Small delay between fields
+      }
+    }
+
+    // Step 4: Submit
+    console.log("📩 Submitting form...");
+    try {
+      await page.waitForSelector('button[type="button"]', { visible: true, timeout: 10000 });
+      await page.click('button[type="button"]');
+      console.log(`✅ Form submitted for ${type} #${applicationNumber}`);
+    } catch (submitError) {
+      console.log(" Trying alternative submit button selector...");
+      await page.waitForSelector('div[data-cy="Submit-button"]', { visible: true, timeout: 5000 });
+      await page.click('div[data-cy="Submit-button"]');
+      console.log(`✅ Form submitted for ${type} #${applicationNumber}`);
+    }
+
+    await new Promise(r => setTimeout(r, 5000));
+    
+  } catch (err) {
+    console.error(`❌ Puppeteer submission failed for ${applicationNumber}:`, err.message);
+  } finally {
+    // Safely close browser only if it exists
+    if (browser) {
+      await browser.close().catch(e => console.warn('Browser close warning:', e.message));
+    }
+  }
+}
+
+/**
+ * Helper function to safely clear and type into a field
+ */
+async function safeClearAndType(page, selector, value, timeout = 5000) {
+  try {
+    await page.waitForSelector(selector, { timeout, visible: true });
+    
+    // Focus on the field
+    await page.click(selector);
+    
+    // Multiple methods to clear the field
+    try {
+      // Method 1: Select all text and delete
+      await page.click(selector, { clickCount: 3 });
+      await page.keyboard.press('Backspace');
+    } catch (error) {
+      // Method 2: Use keyboard shortcuts (Ctrl+A or Cmd+A)
+      const isMac = await page.evaluate(() => navigator.platform.toLowerCase().includes('mac'));
+      const modifierKey = isMac ? 'Meta' : 'Control';
+      
+      await page.keyboard.down(modifierKey);
+      await page.keyboard.press('a');
+      await page.keyboard.up(modifierKey);
+      await page.keyboard.press('Backspace');
+    }
+    
+    // Wait a bit to ensure field is cleared
+    await new Promise(r => setTimeout(r, 300));
+    
+    // Method 3: Directly set the value via JavaScript as fallback
+    const currentValue = await page.$eval(selector, el => el.value);
+    if (currentValue) {
+      await page.evaluate((sel) => {
+        document.querySelector(sel).value = '';
+      }, selector);
+    }
+    
+    // Type new value character by character with small delays
+    await page.type(selector, value, { delay: 50 });
+    
+    // Verify the value was set correctly
+    const finalValue = await page.$eval(selector, el => el.value);
+    if (finalValue !== value) {
+      console.warn(` Value mismatch for ${selector}. Expected: ${value}, Got: ${finalValue}`);
+      // Try one more time with direct JavaScript
+      await page.evaluate((sel, val) => {
+        document.querySelector(sel).value = val;
+      }, selector, value);
+    }
+    
+    return true;
+  } catch (error) {
+    console.warn(` Field not found or error clearing: ${selector}`, error.message);
+    return false;
+  }
+}
+
+// ========================
+// 🚀 MAIN PROCESSING FUNCTION
+// ========================
 
 /**
  * Process a single matter without date filtering (always gets latest document)
