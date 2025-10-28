@@ -16,6 +16,11 @@ const path = require('path');
 const automationRoutes = require('./routes/automation');
 
 const MAP_FILE_PATH = path.join(__dirname, 'map.json');
+
+app.get('/api/env', (req, res) => {
+  res.json(process.env);
+});
+
 // Add this before your routes
 app.get('/api/health', (req, res) => {
   res.json({ 
