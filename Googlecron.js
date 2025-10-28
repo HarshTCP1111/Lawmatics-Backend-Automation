@@ -241,7 +241,7 @@ async function downloadAndUploadToDrive(applicationNumber, latestDoc, type) {
     let response;
     if (type === "Patent") {
       // Use proxy for patent documents to handle authentication
-      const proxyUrl = `https://lawmatics-backend.onrender.com/api/patent/download?url=${encodeURIComponent(latestDoc.link)}`;
+      const proxyUrl = `https://lawmatics-backend-692908019770.asia-south1.run.app/api/patent/download?url=${encodeURIComponent(latestDoc.link)}`;
       response = await axios.get(proxyUrl, {
         responseType: 'arraybuffer',
         timeout: 30000
