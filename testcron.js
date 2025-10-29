@@ -469,7 +469,7 @@ app.get('/api/health', (req, res) => {
 // 🚀 START SERVER
 // ========================
 
-app.listen(PORT, () => {
+app.listen(port, () => {
   console.log(`🧪 USPTO Test Cron running on port ${port}`);
   console.log(`📝 Endpoints:`);
   console.log(`   GET  /api/health - Health check`);

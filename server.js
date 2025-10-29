@@ -604,12 +604,25 @@ mongoose.connect(MONGO_URI, {
 // 🏃‍♂️ START SERVER
 // ========================
 
-app.listen(port, '0.0.0.0', () => {
+// ========================
+// 🏃‍♂️ START SERVER
+// ========================
+
+console.log(`🚀 Starting server on port ${PORT}...`);
+console.log(`🔧 Environment: ${process.env.NODE_ENV || 'development'}`);
+console.log(`📡 Listening on: 0.0.0.0:${PORT}`);
+
+app.listen(PORT, '0.0.0.0', () => {
   console.log(`✅ Server running on port ${PORT}`);
   console.log(`✅ Automation routes available at /api/automation`);
   console.log(`✅ Matter management routes available at /api/matters`);
   console.log(`✅ Map file location: ${MAP_FILE_PATH}`);
+  console.log(`✅ MongoDB connected: ${mongoose.connection.readyState === 1 ? 'Yes' : 'No'}`);
+});
 
+// Handle server errors
+app.on('error', (err) => {
+  console.error('❌ Server error:', err);
 });
 
 
