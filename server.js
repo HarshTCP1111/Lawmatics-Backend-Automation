@@ -604,7 +604,7 @@ mongoose.connect(MONGO_URI, {
 // 🏃‍♂️ START SERVER
 // ========================
 
-app.listen(PORT, () => {
+app.listen(port, '0.0.0.0', () => {
   console.log(`✅ Server running on port ${PORT}`);
   console.log(`✅ Automation routes available at /api/automation`);
   console.log(`✅ Matter management routes available at /api/matters`);
